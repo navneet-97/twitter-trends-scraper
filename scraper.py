@@ -1,3 +1,4 @@
+import os
 from selenium import webdriver  # type: ignore
 from selenium.webdriver.common.by import By  # type: ignore
 from selenium.webdriver.support.ui import WebDriverWait  # type: ignore
@@ -40,7 +41,12 @@ def setup_driver(proxy_host):
     print("Initializing Firefox driver...")
     service = Service(GeckoDriverManager().install())
     
+    os.environ['GH_TOKEN'] = ''  # Disable GitHub API authentication
+    os.environ['WDM_LOCAL'] = '1'  # Enable local cache
+    driver_manager = GeckoDriverManager(version="v0.33.0")  # Specify version
+
     try:
+        service = Service(driver_manager.install())
         driver = webdriver.Firefox(service=service, options=options)
         print("Firefox driver setup successful!")
         return driver
