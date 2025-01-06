@@ -4,7 +4,7 @@ import os
 load_dotenv()
 
 # MongoDB Configuration
-MONGODB_URI = os.getenv('MONGODB_URI', 'mongodb://localhost:27017/')
+MONGODB_URI = os.getenv('MONGODB_URI')
 DATABASE_NAME = 'twitter_trends'
 COLLECTION_NAME = 'trending_topics'
 

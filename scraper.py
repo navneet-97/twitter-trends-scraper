@@ -30,8 +30,10 @@ def setup_driver(proxy_host):
     options.add_argument(f'--proxy={proxy}')
     
     # Add additional options
+    options.add_argument('--headless')
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
+    options.add_argument('--disable-gpu')
     options.add_argument('--width=1920')
     options.add_argument('--height=1080')
 
@@ -148,7 +150,7 @@ def save_to_mongodb(trends, ip_address):
         client = MongoClient(MONGODB_URI)
         db = client[DATABASE_NAME]
         collection = db[COLLECTION_NAME]
-        
+        trends += ['N/A'] * (5 - len(trends)) 
         record = {
             "_id": str(uuid.uuid4()),
             "nameoftrend1": trends[0],
