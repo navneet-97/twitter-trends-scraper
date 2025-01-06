@@ -3,8 +3,6 @@ import os
 
 load_dotenv()
 
-GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
-
 # MongoDB Configuration
 MONGODB_URI = os.getenv('MONGODB_URI')
 DATABASE_NAME = 'twitter_trends'

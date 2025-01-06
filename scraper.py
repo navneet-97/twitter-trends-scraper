@@ -11,10 +11,8 @@ import uuid
 import requests 
 from pymongo import MongoClient  # type: ignore
 import json
-import time
 
 from config import (
-    GITHUB_TOKEN,
     MONGODB_URI,
     DATABASE_NAME,
     COLLECTION_NAME,
@@ -111,22 +109,29 @@ def fetch_trending_topics(driver, retries=3):
                 EC.presence_of_element_located((By.CSS_SELECTOR, "[data-testid='trend']"))
             )
 
-            try:
-                show_more_button = WebDriverWait(driver, 10).until(
-                    EC.element_to_be_clickable((By.XPATH, "//span[text()='Show more']"))
-                )
-                show_more_button.click()
-                print("Clicked on the 'Show more' button to load additional trends...")
-                
-                WebDriverWait(driver, 30).until(
-                    EC.presence_of_all_elements_located((By.CSS_SELECTOR, "[data-testid='trend']"))
-                )
-            except Exception as e:
-                print(f"'Show more' button not found or could not be clicked: {e}")
-
             trends = driver.find_elements(By.CSS_SELECTOR, "[data-testid='trend']")
-            print(f"Found {len(trends)} trends after clicking 'Show more': {[trend.text for trend in trends]}")
+            print(f"Found {len(trends)} trends initially: {[trend.text for trend in trends]}")
             
+            # Try clicking "Show more" to get additional trends if fewer than 5 are found
+            while len(trends) < 5:
+                try:
+                    show_more_button = WebDriverWait(driver, 10).until(
+                        EC.element_to_be_clickable((By.XPATH, "//span[text()='Show more']"))
+                    )
+                    show_more_button.click()
+                    print("Clicked on the 'Show more' button to load additional trends...")
+                    
+                    # Wait for new trends to load
+                    WebDriverWait(driver, 30).until(
+                        EC.presence_of_all_elements_located((By.CSS_SELECTOR, "[data-testid='trend']"))
+                    )
+                    trends = driver.find_elements(By.CSS_SELECTOR, "[data-testid='trend']")
+                    print(f"Found {len(trends)} trends after clicking 'Show more': {[trend.text for trend in trends]}")
+                except Exception as e:
+                    print(f"Could not click 'Show more' or no more trends to load: {e}")
+                    break  # Break if there's no more "Show more" button
+
+            # Collect the trends
             result = []
             for i, trend in enumerate(trends[:5]):
                 try:
@@ -136,10 +141,9 @@ def fetch_trending_topics(driver, retries=3):
                 except:
                     result.append(f"Error reading trend {i + 1}")
 
-            if len(result) < 5:
-                print("Warning: Fewer than 5 trends found. Returning available trends.")
-                
-            return result[:5]
+            # Fill with "N/A" if fewer than 5 trends found
+            result += ['N/A'] * (5 - len(result))
+            return result[:5]  # Ensure exactly 5 items are returned
 
         except Exception as e:
             print(f"Attempt {attempt + 1} failed: {str(e)}")
@@ -152,7 +156,7 @@ def fetch_trending_topics(driver, retries=3):
                     print("Error screenshot saved as trends_error.png")
                 except:
                     print("Could not save error screenshot")
-                return ["Error fetching trend"] * 5
+                return ["Error fetching trend"] * 5  # Ensure a list is always returned
 
 def save_to_mongodb(trends, ip_address):
     try:
@@ -178,21 +182,6 @@ def save_to_mongodb(trends, ip_address):
         raise
     finally:
         client.close()
-def make_authenticated_request(url):
-    headers = {
-        'Authorization': f'token {GITHUB_TOKEN}',
-    }
-    for attempt in range(5):  # Retry up to 5 times
-        response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-            return response.json()
-        elif response.status_code == 403:  # Forbidden, possibly due to rate limiting
-            print("Rate limit exceeded. Waiting before retrying...")
-            time.sleep(2 ** attempt)  # Exponential backoff
-        else:
-            print(f"Failed to make request: {response.status_code} - {response.text}")
-            break
-    return None
 
 def scrape_trends():
     driver = None
