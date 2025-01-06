@@ -11,7 +11,10 @@ import uuid
 import requests 
 from pymongo import MongoClient  # type: ignore
 import json
+import time
+
 from config import (
+    GITHUB_TOKEN,
     MONGODB_URI,
     DATABASE_NAME,
     COLLECTION_NAME,
@@ -175,6 +178,21 @@ def save_to_mongodb(trends, ip_address):
         raise
     finally:
         client.close()
+def make_authenticated_request(url):
+    headers = {
+        'Authorization': f'token {GITHUB_TOKEN}',
+    }
+    for attempt in range(5):  # Retry up to 5 times
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            return response.json()
+        elif response.status_code == 403:  # Forbidden, possibly due to rate limiting
+            print("Rate limit exceeded. Waiting before retrying...")
+            time.sleep(2 ** attempt)  # Exponential backoff
+        else:
+            print(f"Failed to make request: {response.status_code} - {response.text}")
+            break
+    return None
 
 def scrape_trends():
     driver = None
