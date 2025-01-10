@@ -7,3 +7,4 @@ __pycache__/
 geckodriver.log
 login_error.png
 trends_error.png
+.vercel
